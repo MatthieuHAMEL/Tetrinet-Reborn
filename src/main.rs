@@ -150,19 +150,14 @@ fn spawn_tetro(
   }
   // For now just I spawn a T block
   // TODO create a helper function with default pos for all types of blocks
-  // TODO 2 : here I could check that my new tetro's coordinates don't overlap with the grid
-
-  
+  // TODO 2 : here I could check that my new tetro's coordinates don't overlap with the grid  
 }
 
 // HELPER
 fn tetro_can_move_down(tetro: &Tetro, grid: &Grid) -> bool {
-  tetro.coos.iter().all(|coord| {
-    if coord.1 == GRID_HEIGHT - 1 { // floor -> can't move down!
-      return false;
-    }
-    debug!("looking at grid[{}][{}]", coord.1 + 1, coord.0);
-    !grid.grid[coord.1 + 1][coord.0]
+  !tetro.coos.iter().any(|coord| {
+     // floor or something behind for any of the blocks
+    coord.1 == GRID_HEIGHT - 1 || grid.grid[coord.1 + 1][coord.0]
   })
 }
 
@@ -199,12 +194,11 @@ fn apply_gravity(
       // lock in grid and despawn tetro
       lock_tetro(&mut commands, &children, &mut blocks, &mut grid, &grid_zone);
       
-      // Despawn the tetro. Sprites / blocks have been reparented in lock_tetro.
+      // Despawn the tetro. Sprites / blocks have been reparented inside lock_tetro.
       commands.entity(entity).despawn();
-      // Emit event to spawn a new tetro
+      // Spawn a new tetro
       commands.trigger(NeedTetroEvent);
-      // Time to update the grid (TODO)
-    } // TODO -> blocks (sprites) in the grid shouldn't be ActiveBlocks anymore !
+    }
   }
 }
 
@@ -248,7 +242,7 @@ fn main() {
   app.add_systems(
     Startup,
     (spawn_camera,
-     spawn_grid_zone.after(spawn_camera),
+     spawn_grid_zone.after(spawn_camera), // TODO I don't want to do arithmetic with the window size in that part.
      send_initial_tetro_event.after(spawn_grid_zone))
   );
 
