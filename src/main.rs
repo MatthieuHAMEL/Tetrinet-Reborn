@@ -125,6 +125,7 @@ fn spawn_tetro(
   let middle: usize = GRID_WIDTH / 2; // TODO wrong 
   debug!("Spawning tetro at column {}", middle);
 
+  //// TODO need a helper functioni to get the coos and the random tetro 
   let coos = [(middle-1, 0), (middle, 0), (middle+1, 0), (middle, 1)];
 
   let tetro_id = commands.spawn((
@@ -132,7 +133,8 @@ fn spawn_tetro(
     ChildOf(*grid_zone),
     Transform::default(),
     Visibility::default()
-  )).id();  
+  )).id();
+  // END TODO 
   
   // Spawn the corresponding sprites as children of the Tetro
   for &(col, row) in coos.iter() {
@@ -153,15 +155,38 @@ fn spawn_tetro(
   // TODO 2 : here I could check that my new tetro's coordinates don't overlap with the grid  
 }
 
-// HELPER
-fn tetro_can_move_down(tetro: &Tetro, grid: &Grid) -> bool {
+// HELPERS
+fn can_move_down(tetro: &Tetro, grid: &Grid) -> bool {
   !tetro.coos.iter().any(|coord| {
      // floor or something behind for any of the blocks
     coord.1 == GRID_HEIGHT - 1 || grid.grid[coord.1 + 1][coord.0]
   })
 }
 
+// Helper functions for collision checking
+fn can_move_left(tetro: &Tetro, grid: &Grid) -> bool {
+  tetro.coos.iter().all(|coord| {
+    coord.0 > 0 && !grid.grid[coord.1][coord.0 - 1]
+  })
+}
+
+fn can_move_right(tetro: &Tetro, grid: &Grid) -> bool {
+  tetro.coos.iter().all(|coord| {
+    coord.0 < GRID_WIDTH - 1 && !grid.grid[coord.1][coord.0 + 1]
+  })
+}
+
+fn update_block(grid_pos: &mut GridPosition, transform: &mut Transform, new_col: usize, new_row: usize, grid: &Grid) {
+  grid_pos.col = new_col;
+  grid_pos.row = new_row;
+  *transform = block_transform(new_col, new_row, &grid); // update visual pos
+}
+
 // Grid is filled only when we LOCK the tetromino
+// TODO : simplify the thing
+// Tetrominos shouldn't exist as entities.
+// Just use TetroIds to group blocks by tetrominos
+// coordinates are stored directly in the blocks 
 fn apply_gravity(
   mut commands: Commands,
   mut tetros: Query<(Entity, &mut Tetro, &Children)>,
@@ -176,7 +201,7 @@ fn apply_gravity(
   }
   
   for (entity, mut tetro, children) in tetros.iter_mut() {
-    if tetro_can_move_down(&tetro, &grid) {
+    if can_move_down(&tetro, &grid) {
       // Move down
       for coord in tetro.coos.iter_mut() {
         coord.1 += 1;
@@ -185,9 +210,7 @@ fn apply_gravity(
       // Update the children blocks GridPosition and Transform
       for (child, &(col, row)) in children.iter().zip(tetro.coos.iter()) {
         if let Ok((mut grid_pos, mut transform)) = blocks.get_mut(child) {
-          grid_pos.col = col;
-          grid_pos.row = row;
-          *transform = block_transform(col, row, &grid); // update visual pos
+          update_block(&mut grid_pos, &mut transform, col, row, &grid);
         }
       }
     } else {
@@ -198,6 +221,44 @@ fn apply_gravity(
       commands.entity(entity).despawn();
       // Spawn a new tetro
       commands.trigger(NeedTetroEvent);
+    }
+  }
+}
+
+fn tetro_on_left_right_input(
+  keyboard_input: Res<ButtonInput<KeyCode>>,
+  mut tetro_query: Query<(&mut Tetro, &Children)>,
+  mut blocks: Query<(&mut GridPosition, &mut Transform), With<ActiveBlock>>,
+  grid: Res<Grid>,
+) {
+  if keyboard_input.just_pressed(KeyCode::ArrowLeft) {
+    for (mut tetro, children) in tetro_query.iter_mut() {
+      if can_move_left(&tetro, &grid) {
+        for coo in tetro.coos.iter_mut() {
+          coo.0 -= 1; // move left in grid space
+        }
+	// Update the children blocks GridPosition and Transform
+	// Can be simplified, see remark above apply_gravity
+	for (child, &(col, row)) in children.iter().zip(tetro.coos.iter()) {
+          if let Ok((mut grid_pos, mut transform)) = blocks.get_mut(child) {
+            update_block(&mut grid_pos, &mut transform, col, row, &grid);
+          }
+	}
+      }
+    }
+  }
+  if keyboard_input.just_pressed(KeyCode::ArrowRight) {
+    for (mut tetro, children) in tetro_query.iter_mut() {
+      if can_move_right(&tetro, &grid) {
+        for coo in tetro.coos.iter_mut() {
+          coo.0 += 1; // move right in grid space
+        }
+      }
+      for (child, &(col, row)) in children.iter().zip(tetro.coos.iter()) {
+        if let Ok((mut grid_pos, mut transform)) = blocks.get_mut(child) {
+          update_block(&mut grid_pos, &mut transform, col, row, &grid);
+        }
+      }
     }
   }
 }
@@ -247,7 +308,7 @@ fn main() {
   );
 
   // Systems that run once per frame
-  app.add_systems(Update, apply_gravity); // with a timer 
+  app.add_systems(Update, (apply_gravity, tetro_on_left_right_input)); // with a timer 
   
   // TODO spawn_grid_background also when window is resized
   // RESOURCES
