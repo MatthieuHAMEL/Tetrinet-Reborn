@@ -2,11 +2,11 @@
 
 ## P1. Project basic setup
 
--  R1. Set up a Rust Workspace
+-  (OK) R1. Set up a Rust Workspace
 
--  R2. Add Bevy 0.16 as a dependency
+-  (OK) R2. Add Bevy 0.16 as a dependency
 
--  R3. Basic skeleton : main loop & basic state machine : MainMenu, Connecting, InGame
+-  (OK) R3. Basic skeleton : main loop & basic state machine : MainMenu, Connecting, InGame
 
 ## P2. Networking Layer
 

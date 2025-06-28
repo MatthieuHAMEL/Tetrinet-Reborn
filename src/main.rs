@@ -13,10 +13,28 @@ enum AppState {
   InGame
 }
 
-fn ui_example_system(mut contexts: EguiContexts) {
-  egui::Window::new("Hello").show(contexts.ctx_mut(), |ui| {
-    ui.label("world");
-  });
+fn main_menu() {
+  debug!("main_menu()");
+}
+
+fn titlescreen_ui(mut contexts: EguiContexts, mut next_state: ResMut<NextState<AppState>>) {
+  // Centered at the middle of the screen
+  egui::Area::new(egui::Id::new("tnet_menu"))
+    .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]) // Centered with no offset
+    .interactable(true)
+    .show(contexts.ctx_mut(), |ui| {
+      egui::Frame::new()
+        .show(ui, |ui| {
+          ui.vertical_centered(|ui| {
+            ui.heading("This is TetriNET REBORN!");
+            ui.add_space(10.0);
+            if ui.button("CONNECT").clicked() {
+              info!("Connect button clicked");
+              next_state.set(AppState::Connecting);
+            }
+          });
+        });
+    });
 }
 
 fn main() {
@@ -27,12 +45,12 @@ fn main() {
 	filter: "warn,tetrinet=debug".into(),
 	level: bevy::log::Level::DEBUG,
 	custom_layer: |_| None,
-      })
-  ).add_plugins(EguiPlugin { enable_multipass_for_primary_context: true });
-
-  app.add_systems(EguiContextPass, ui_example_system);
+      }))
+    .add_plugins(EguiPlugin { enable_multipass_for_primary_context: true })
+    // SYSTEMS
+    .add_systems(EguiContextPass, titlescreen_ui.run_if(in_state(AppState::MainMenu)))
+    .add_systems(OnEnter(AppState::MainMenu), main_menu);
   
-
   debug!("TETRINET BEGIN");
 
   app.init_state::<AppState>();
@@ -49,6 +67,8 @@ fn main() {
 
   // OBSERVERS
   //app.add_observer(myObserver); // Can take a Trigger<MyEvent>
+
+  // TODO why does it panic at exit? cf bevy discord 
   
   app.run();
   debug!("TETRINET END");
