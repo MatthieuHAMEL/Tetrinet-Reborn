@@ -6,20 +6,198 @@ I did not find any formal specification of the TetriNET protocol online. So here
 
 The connection between a TetriNET client and a TetriNET server is a TCP connection. The server should accept connections on the port **31457**.
 
-A TetriNET message ends with the `�` separator (ASCII 255). So the TCP data stream should be processed with respect to this character. 
+A TetriNET message ends with the `ÿ` separator (ASCII 255). So the TCP data stream should be processed with respect to this character. 
 
 
 ## II - Messages that the client can RECEIVE 
 
-playerjoin, pline, field, winlist, playernum, gmsg
+Every message is ÿ-terminated. 
+
+This is the exhaustive (TODO!!) list of possible message types:
+
+winlist, playernum, playerjoin, team, f, playerlost, ingame, pause, pline, newgame, gmsg
+
+### II.1. winlist : some list of players with their scores 
+
+This can be sent by the server at any time.
+
+The general format is : " winlist entry1 entry2 entry3 entry4 etc... "
+where an entry consists of : " <t|p><Teamname|Playername>;<points> "
+<t|p> : t=team-entry and p=player-entry .
+
+
+### II.2. playernum : the number assigned to the client
+
+This can be sent by the server at any time.
+e.g. `playernum 1`
+
+### II.3. playerjoin
+
+This can be sent by the server at any time.
+
+It gives the ID and the nickname of a new player. 
+e.g. `playerjoin 4 babar`
+
+### II.4. team
+
+This can be sent by the server at any time.
+When the client sends the same exact `team` message to the server to declare its team, the server propagates it to other clients. So if there are 4 players (including the Client), the Client will receive 3 team messages at least (TODO verify this)
+
+### II.5. f (fields)
+
+This can be sent by the server at any time.
+
+```
+f X <fieldstring>
+```
+
+Where X is the player number, and `fieldstring` a string of 264 (12 cols, 22 rows) chars representing the field.
+The chars can be : 0,1,2,3,4,5,a,c,n,r,s,b,q,o : 
+
+Char	What
+0	blank/empty
+1	blue block
+2	yellow block
+3	green block
+4	purple block
+5	red block
+a	special a
+c	special c
+n	special n
+r	special r
+s	special s
+b	special b
+g	special g
+q	special q
+o	special o
+
+## II.6. playerlost
+
+When a player dies, including our client, the server broadcasts :
+```
+playerlost X
+```
+
+## II.7. ingame
+
+If the game is currently active the server will send an `ingame` message.
+
+## II.8. pause
+
+The Server will tell the Client whether the game is paused or not :
+
+e.g. `pause 0` / `pause 1`
+
+## II.9. pline (0)
+
+The server sends a message to a Client with pline 0, e.g. 
+
+```
+pline 0 Game has been stopped by Babar!
+```
+
+## II.10. newgame 
+
+The server tells every client that a new game starts.
+
+e.g. 
+```
+newgame 0 1 2 1 1 1 18 3333333333333355555555555555222222222222222444444444444446666666666666677777777777777111111111111111 1111111111111111111111111111111112222222222222222222234444444444444566666666666666678888889999999999 0 1
+```
+
+This number sequence represents the game settings : format is :
+
+```
+newgame stack startinglevel linesperlevel levelincrease linesperspecial specialadded specialcapacity blockstring specialstring averagelevels classicrules
+```
+
+The blockstring will consists of 100 chars (100%), each char represents a Tetromino, this allows to specify the occurency rate of every Tetromino in the game :
+
+1	line/stick
+2	square
+3	left L
+4	right L
+5	left Z
+6	right Z
+7	halfcross
+
+The same principle applies for the specialstring :
+
+Char   What
+1	addline (a)
+2	clearline (c)
+3	nukefield (n)
+4	randomclear (r)
+5	switchfield (s)
+6	clearspecials (b)
+7	gravity (g)
+8	quakefield (q)
+9	blockbomb (o)
+
+## II.11. gmsg
+
+Game Messages format is :
+```
+gmsg <nick> <message>
+```
+
+According to [TSRV.COM], the Server doesn't check the nick, it just displays it, so the following is possible :
+
+```
+gmsg <message>
+```
+
 
 ## III - Messages that the client can SEND
 
+In the following messages, <N> is the player number.
+
 team, f, startgame, gmsg
+
+### III.1. team
+
+This can be sent by the client at any time. TODO : during games ?????  
+The client sends its team to the server.
+
+```
+team <N> <teamname>
+```
+
+### III.2. pline (1)
+
+This is for chatting with other players : e.g. :
+
+```
+pline <N> Good game everyone!
+```
+
+### III.3. plineact 
+
+Like on IRC this is an action message (which is just displayed differently in the chat) : 
+`plineact <N> myText`
+
+TNET on Win32 : type "/me myText" in the chat bar. TODO : check which string is really sent to the server (wireshark)
+
+### III.4. startgame 
+
+The Client will request a game start / stop by sending :
+```
+startgame 1|0 <N>
+```
+
+where 1 = Start game ; 0 = Stop game and X = playernumber
+
+### III.5. gmsg
+
+C.f. §II.11. 
+
+### III.6. f 
+
+TODO field update rules
 
 ## IV - Establishment of the connection 
 
-After the TCP CONNECT, the client should send an **encoded**, �-terminated string. The **unencoded** string has the following format : 
+After the TCP CONNECT, the client should send an **encoded**, ÿ-terminated string. The **unencoded** string has the following format : 
 
 ```
 <command> <player_name> <tnet_version>

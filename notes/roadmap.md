@@ -1,5 +1,17 @@
 # TETRINET-REBORN ROADMAP
 
+## Why writing a TetriNET client ?
+
+- Open Source
+- Multi-OS + Web (WASM) + Mobile
+- Security // Outdated networking
+  
+   wss://
+C <------> S (WS endpoint) <---> port 31457
+
+- Better UI, controls, modding, etc 
+- Fun
+
 ## P1. Project basic setup
 
 -  (OK) R1. Set up a Rust Workspace
@@ -12,9 +24,11 @@
 
 ### P2.1. Define the TetriNET Protocol 
 
-- R4. Enumerate messages that the client receives (e.g. `playerjoin`, `pline`, `field`, ...)
+- (OK) R4. Enumerate messages that the client receives (e.g. `playerjoin`, `pline`, `field`, ...)
 
-- R5. Enumerate messages that the client sends (e.g. `team`, `pline`, ...)
+- (OK) R5. Enumerate messages that the client sends (e.g. `team`, `pline`, ...)
+
+- (OK) R5b. Encode the first message from the client with respect to the specification. 
 
 - R6. Parse incoming strings into Rust enums/structs
 
@@ -48,7 +62,7 @@
 
 ### P4.1. Draw the playing field
 
-- R19. Use Bevy’s 2D API to render blocks
+- R19. Use Bevy's 2D API to render blocks
 - R20. Use a camera to show the whole board
 - R21. Support multiple player fields
 
@@ -75,7 +89,7 @@
 
 ### P6.1 Piece System
 
-- R30. Shapes, randomization (maybe 7-bag?)
+- R30. Shapes, randomization (maybe 7-bag?) https://tetris.wiki/Random_Generator
 - R31. Piece rotation rules (cf. "Super Rotation System (SRS))
 - R32. Ghost piece (?)
 
@@ -93,7 +107,7 @@
 - R37. Sync piece positions or garbage
 - R38. Display other players' fields
 
-### P7.2. **Latency Handling**
+### P7.2. Latency Handling
 
 - R39. Queueing or interpolation if needed
 

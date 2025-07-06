@@ -1,3 +1,4 @@
+use rand::Rng;
 use bevy_egui::{EguiPlugin, EguiContextPass, EguiContexts, egui};
 use bevy::{input::{common_conditions::input_just_released, mouse::AccumulatedMouseMotion}, prelude::*, window::{CursorGrabMode, PrimaryWindow, WindowFocused}};
 
@@ -14,7 +15,7 @@ enum AppState {
 }
 
 fn main_menu() {
-  debug!("main_menu()");
+  info!("main_menu()");
 }
 
 fn titlescreen_ui(mut contexts: EguiContexts, mut next_state: ResMut<NextState<AppState>>) {
@@ -36,6 +37,33 @@ fn titlescreen_ui(mut contexts: EguiContexts, mut next_state: ResMut<NextState<A
         });
     });
 }
+
+/** Encrypt the command: tetrisstart nickname 1.13 based on the server IP
+ * Cf §IV of the specification in the notes! */
+pub fn tnet_encrypt(nickname: &str, ip: [u8; 4]) -> String {
+  let msg = format!("tetrisstart {} 1.13", nickname);
+  let s: Vec<char> = msg.chars().collect();
+
+  // Generate @h from IP
+  let ip_hash_str = (ip[0] as u32 * 54 + ip[1] as u32 * 41 + ip[2] as u32 * 29 + ip[3] as u32 * 17).to_string();
+  let h: Vec<char> = ip_hash_str.chars().collect();
+
+  // Random salt (dec)
+  let mut rng = rand::rng();
+  let mut dec = rng.random_range(0..=255) as u8;
+  let mut encrypted = format!("{:02X}", dec & 0xFF);
+
+  // Encrypt loop
+  for i in 0..s.len() {
+    let s_char = s[i] as u8;
+    let h_char = h[i % h.len()] as u8;
+    dec = ((dec + s_char) % 255) as u8 ^ h_char;
+    encrypted.push_str(&format!("{:02X}", dec & 0xFF));
+  }
+
+  encrypted
+}
+
 
 fn main() {
   let mut app = App::new();
